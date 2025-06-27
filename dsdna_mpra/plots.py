@@ -1,7 +1,10 @@
 import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
 from matplotlib.axes import Axes
+from matplotlib.image import AxesImage
 import scipy.stats as sps
+from typing import Optional
 
 
 def violin(
@@ -76,3 +79,46 @@ def box(
     if text:
         ax.text(x=pos, y=np.quantile(values, 0.55), s=str(len(values)),
                 ha='center', fontsize=10)
+
+
+def heatmap_with_stats(
+    ax: Axes,
+    values: pd.DataFrame,
+    imshow_args: Optional[dict] = None,
+    title_args: Optional[dict] = None,
+    text_fontsize: int = 15,
+    set_xticklabels: bool = True,
+    set_yticklabels: bool = True
+) -> AxesImage:
+
+    for (j, i), val in np.ndenumerate(values.to_numpy()):
+        if pd.isna(val):
+            continue
+        if np.isclose(val, int(val)):
+            text = f"{int(val)}"
+        else:
+            text = f"{val:.2f}"
+        ax.text(
+            i, j, text,
+            ha='center', va='center',
+            fontsize=text_fontsize, color='black'
+        )
+
+    if imshow_args is None:
+        imshow_args = {'cmap': 'viridis', 'vmin': 0}
+
+    img = ax.imshow(values, interpolation='nearest', aspect='auto', **imshow_args)
+
+    if title_args is not None:
+        ax.set_title(**title_args)
+
+    if set_xticklabels:
+        ax.set_xticks(np.arange(values.shape[1]))
+        ax.set_xticklabels(values.columns, fontsize=10)
+        ax.xaxis.tick_top()
+    if set_yticklabels:
+        ax.set_yticks(np.arange(values.shape[0]))
+        ax.set_yticklabels(values.index, fontsize=15)
+
+    ax.grid(False)
+    return img
