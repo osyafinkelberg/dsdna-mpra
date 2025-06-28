@@ -1,0 +1,152 @@
+import typing as tp
+import numpy as np
+import pandas as pd
+from numpy.typing import NDArray
+
+
+def vectorized_pearsonr(
+    lhs_matrix: NDArray[np.float64],
+    rhs_matrix: NDArray[np.float64]
+) -> NDArray[np.float64]:
+    """
+    Computes the Pearson correlation coefficient between each pair of columns in lhs_matrix and rhs_matrix,
+    using a fully vectorized approach.
+
+    Parameters
+    ----------
+    lhs_matrix : np.ndarray of shape (N, D1)
+        Left-hand side input matrix where columns are variables and rows are observations.
+    rhs_matrix : np.ndarray of shape (N, D2)
+        Right-hand side input matrix with the same number of rows as lhs_matrix.
+
+    Returns
+    -------
+    corr_matrix : np.ndarray of shape (D2, D1)
+        Matrix of Pearson correlation coefficients between each column of rhs_matrix and lhs_matrix.
+        Entry (i, j) is the correlation between rhs_matrix[:, i] and lhs_matrix[:, j].
+    """
+    n_samples = rhs_matrix.shape[0]
+    lhs_sum = lhs_matrix.sum(axis=0)  # (D1,)
+    rhs_sum = rhs_matrix.sum(axis=0)  # (D2,)
+    dot_product = np.einsum('ij,ik->kj', lhs_matrix, rhs_matrix) * n_samples  # (D1, D2).T → (D2, D1)
+    cross_term = np.outer(rhs_sum, lhs_sum)  # (D2, D1)
+    lhs_sq_sum = np.sum(lhs_matrix ** 2, axis=0)  # (D1,)
+    rhs_sq_sum = np.sum(rhs_matrix ** 2, axis=0)  # (D2,)
+    lhs_var = n_samples * lhs_sq_sum - lhs_sum ** 2  # (D1,)
+    rhs_var = n_samples * rhs_sq_sum - rhs_sum ** 2  # (D2,)
+    denominator = np.sqrt(np.outer(rhs_var, lhs_var))  # (D2, D1)
+    numerator = dot_product - cross_term  # (D2, D1)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        corr_matrix = numerator / denominator
+    return corr_matrix
+
+
+def find_sorted_label_boundaries(labels: NDArray[np.integer]) -> NDArray[np.int64]:
+    """
+    Given a 1D array of labels, returns the indices where label changes occur
+    after sorting. These are the boundaries between label groups.
+
+    Parameters
+    ----------
+    labels : np.ndarray of shape (N,)
+        Array of integer or categorical labels.
+
+    Returns
+    -------
+    borders : np.ndarray of shape (K,)
+        Indices in the sorted array where the label changes.
+    """
+    sorted_labels = np.sort(labels)
+    changes = sorted_labels[1:] != sorted_labels[:-1]
+    return np.nonzero(changes)[0] + 1
+
+
+def supervised_binary_clustering(
+    tile_lfc_array: NDArray[np.float64],
+    coverage_threshold: float = 0.8,
+    binarization_threshold: float = 0.5
+) -> tp.Tuple[NDArray[np.float64], NDArray[np.int64], NDArray[np.int64]]:
+    """
+    Clusters CRE tiles into binary activity profiles based on thresholded rank scores,
+    then selects the largest classes covering a specified portion of the dataset.
+
+    Parameters
+    ----------
+    tile_lfc_array : np.ndarray of shape (N, C)
+        Log fold-change activity values per tile (N tiles × C conditions).
+    coverage_threshold : float, default=0.8
+        Fraction of total tiles to cover using the largest binary activity classes.
+    binarization_threshold : float, default=0.5
+        Threshold for binarizing the normalized ranks.
+
+    Returns
+    -------
+    matrix : np.ndarray
+        Ranked and filtered activity matrix (tiles in selected large classes).
+    borders : np.ndarray
+        Indices where class boundaries occur within the returned matrix.
+    selected_class_ids : np.ndarray
+        Binary class identifiers retained after filtering.
+    """
+
+    # rank-normalize tile activities
+    tile_activity_ranks = tile_lfc_array.argsort(axis=0).argsort(axis=0) / tile_lfc_array.shape[0]
+
+    # binarize ranks and encode as integer class IDs
+    binary_matrix = (tile_activity_ranks >= binarization_threshold).astype(int)
+    binary_class_ids = np.array([
+        int("".join(bits.astype(str)), 2) for bits in binary_matrix
+    ])
+
+    # prepare DataFrame to track class info
+    tile_activities = pd.DataFrame({'rank_class': binary_class_ids})
+    class_counts = tile_activities['rank_class'].value_counts().to_dict()
+    class_to_size = np.vectorize(class_counts.get)
+    tile_activities['rank_class_size'] = class_to_size(tile_activities['rank_class'])
+
+    # sort and re-categorize rank classes by decreasing size
+    sorted_classes = (
+        tile_activities
+        .sort_values('rank_class_size', ascending=False)['rank_class']
+        .drop_duplicates()
+    )
+    tile_activities['rank_class'] = (
+        tile_activities['rank_class']
+        .astype('category')
+        .cat.set_categories(sorted_classes, ordered=True)
+    )
+
+    borders = np.concatenate([
+        [0],
+        find_sorted_label_boundaries(binary_class_ids),
+        [binary_class_ids.size]
+    ])
+    class_sizes = np.diff(borders)
+
+    # identify largest classes covering at least `coverage_threshold` fraction of data
+    sorted_size_indices = class_sizes.argsort()[::-1]
+    cumulative_sizes = class_sizes[sorted_size_indices].cumsum()
+    cutoff_index = np.searchsorted(cumulative_sizes, coverage_threshold * class_sizes.sum())
+
+    retain_mask = np.zeros_like(class_sizes, dtype=bool)
+    retain_mask[sorted_size_indices[:cutoff_index + 1]] = True
+    selected_class_ids = np.unique(binary_class_ids)[retain_mask]
+
+    # select tiles in retained classes and sort within each class
+    is_large_class = np.isin(binary_class_ids, selected_class_ids)
+    size_key = (
+        tile_activities[is_large_class]
+        .reset_index(drop=True)
+        .sort_values('rank_class', ascending=True)
+        .index
+        .values
+    )
+
+    matrix = tile_activity_ranks[is_large_class][size_key]
+
+    # compute class borders within the reduced matrix
+    final_borders = np.cumsum(
+        sorted(class_to_size(tile_activities[is_large_class]['rank_class'].unique()), reverse=True)
+    ) - 1
+
+    return matrix, final_borders, selected_class_ids
