@@ -1,8 +1,10 @@
 from pathlib import Path
+import os
 
 
 # base project directory (set manually)
 BASE_DIR = Path("/projectnb/vtrs/joseff/dsdna-mpra")
+ENTREZ_EMAIL = os.getenv("ENTREZ_EMAIL", "bioinfo.project@gmail.com")
 
 DATA_DIR = BASE_DIR / "data"
 RAW_DIR = DATA_DIR / "raw"
