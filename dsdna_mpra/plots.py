@@ -1,8 +1,10 @@
+import typing as tp
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 from matplotlib.axes import Axes
 from matplotlib.image import AxesImage
+from matplotlib.patches import Patch
 import scipy.stats as sps
 from typing import Optional
 
@@ -122,3 +124,55 @@ def heatmap_with_stats(
 
     ax.grid(False)
     return img
+
+
+def stacked_bar_plot(
+    ax: Axes,
+    dataframe: pd.DataFrame,
+    x_value: str,
+    hue: str,
+    weight: str,
+    color: str,
+    legend_title: Optional[str] = None,
+    normalize_weights: bool = False,
+    x_pos_start: float = -1.0,
+    x_pos_step: float = 1.0,
+    width: float = 0.8,
+    legend_keys: Optional[tp.Dict[str, tp.Any]] = None
+) -> None:
+    if legend_keys is None:
+        legend_keys = {}
+
+    legend_entries = set()
+    x_labels = []
+    x_pos = x_pos_start
+
+    for x_val, group in dataframe.groupby(x_value, sort=False):
+        x_labels.append(x_val)
+        x_pos += x_pos_step
+        y_base = 0.0
+
+        hues = group[hue].values
+        weights = group[weight].values
+        bar_colors = (
+            np.full(group.shape[0], color) if color not in group.columns else group[color].values
+        )
+
+        if normalize_weights:
+            total_weight = weights.sum()
+            weights = weights / total_weight if total_weight != 0 else weights
+
+        for i in range(len(group)):
+            ax.bar(x_pos, weights[i], width=width, bottom=y_base, color=bar_colors[i])
+            legend_entries.add((bar_colors[i], hues[i]))
+            y_base += weights[i]
+
+    ax.set_xticks(np.arange(len(x_labels)))
+    ax.set_xticklabels(x_labels, rotation=90, fontsize=15)
+
+    if legend_title:
+        sorted_legend = sorted(legend_entries, key=lambda x: str(x[1]))
+        legend_handles = [
+            Patch(facecolor=color, edgecolor=color, label=label) for color, label in sorted_legend
+        ]
+        ax.legend(handles=legend_handles, title=legend_title, loc='upper left', **legend_keys)
