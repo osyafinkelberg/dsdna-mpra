@@ -1,48 +1,10 @@
 import sys
 import typing as tp
-from numpy.typing import NDArray
-
 import numpy as np
 import pandas as pd
 
 sys.path.insert(0, '..')
-from dsdna_mpra import config  # noqa E402
-
-
-def merge(positions: NDArray[np.int64]) -> NDArray[np.int64]:
-    """
-    Merge overlapping or adjacent intervals.
-
-    Parameters:
-        positions (np.ndarray): A 2D NumPy array of shape (n, 2), where each row is [start, end].
-                                Intervals may be unsorted and overlapping.
-
-    Returns:
-        np.ndarray: A 2D NumPy array of merged intervals.
-    """
-    if positions.size == 0:
-        return positions
-    starts = positions[:, 0]
-    ends = positions[:, 1]
-    borders = np.concatenate([
-        np.stack([starts, np.ones_like(starts)], axis=1),
-        np.stack([ends, np.zeros_like(ends)], axis=1)
-    ])
-    borders = borders[np.argsort(borders[:, 0], kind='stable')]
-    merged = []
-    depth = 0
-    current_start = None
-    for position, is_start in borders:
-        if is_start:
-            if depth == 0:
-                current_start = position
-            depth += 1
-        else:
-            depth -= 1
-            if depth == 0:
-                merged.append([current_start, position])
-
-    return np.array(merged, dtype=positions.dtype)
+from dsdna_mpra import config, clustering  # noqa E402
 
 
 def merge_active_tiles_to_cres(
@@ -55,7 +17,7 @@ def merge_active_tiles_to_cres(
         if positions.size == 0:
             return np.empty((0, 2), dtype=np.int64)
         intervals = np.stack([positions, positions + tile_size], axis=1)
-        return merge(intervals)
+        return clustering.merge(intervals)
 
     fwd_cres = _filter_and_merge(paired_tiles["fwd_lfc"])
     rev_cres = _filter_and_merge(paired_tiles["rev_lfc"])
@@ -69,7 +31,7 @@ def merge_cres_across_strands(cre_df: pd.DataFrame) -> pd.DataFrame:
         fwd = group_df.loc[group_df['strand'] == '+', ['begin', 'end']].to_numpy()
         rev = group_df.loc[group_df['strand'] == '-', ['begin', 'end']].to_numpy()
         intervals = np.vstack([fwd, rev]) if fwd.size + rev.size > 0 else np.empty((0, 2), dtype=np.int64)
-        merged = merge(intervals)
+        merged = clustering.merge(intervals)
         merged_df = pd.DataFrame(merged, columns=['begin', 'end'])
         for col, val in zip(group_cols, group_values):
             merged_df[col] = val
@@ -85,7 +47,7 @@ def merge_cres_across_cells(cre_df: pd.DataFrame) -> pd.DataFrame:
     merged_rows = []
     for group_vals, group_df in cre_df.groupby(group_cols):
         regions = group_df[['begin', 'end']].to_numpy()
-        merged = merge(regions)
+        merged = clustering.merge(regions)
         merged_df = pd.DataFrame(merged, columns=['begin', 'end'])
         for col, val in zip(group_cols, group_vals):
             merged_df[col] = val

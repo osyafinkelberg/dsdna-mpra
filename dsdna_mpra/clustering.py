@@ -4,6 +4,42 @@ import pandas as pd
 from numpy.typing import NDArray
 
 
+def merge(positions: NDArray[np.int64]) -> NDArray[np.int64]:
+    """
+    Merge overlapping or adjacent intervals.
+
+    Parameters:
+        positions (np.ndarray): A 2D NumPy array of shape (n, 2), where each row is [start, end].
+                                Intervals may be unsorted and overlapping.
+
+    Returns:
+        np.ndarray: A 2D NumPy array of merged intervals.
+    """
+    if positions.size == 0:
+        return positions
+    starts = positions[:, 0]
+    ends = positions[:, 1]
+    borders = np.concatenate([
+        np.stack([starts, np.ones_like(starts)], axis=1),
+        np.stack([ends, np.zeros_like(ends)], axis=1)
+    ])
+    borders = borders[np.argsort(borders[:, 0], kind='stable')]
+    merged = []
+    depth = 0
+    current_start = None
+    for position, is_start in borders:
+        if is_start:
+            if depth == 0:
+                current_start = position
+            depth += 1
+        else:
+            depth -= 1
+            if depth == 0:
+                merged.append([current_start, position])
+
+    return np.array(merged, dtype=positions.dtype)
+
+
 def vectorized_pearsonr(
     lhs_matrix: NDArray[np.float64],
     rhs_matrix: NDArray[np.float64]
