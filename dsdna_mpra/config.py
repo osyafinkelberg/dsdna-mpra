@@ -13,9 +13,16 @@ RESULTS_DIR = DATA_DIR / "results"
 FIGURES_DIR = DATA_DIR / "figures"
 
 CELL_LINES = ['GM12878', 'Jurkat', 'MRC5', 'A549', 'HEK293', 'K562']
-CELL_LINES_COLORS = ['navy', 'cornflowerblue', 'forestgreen', 'deeppink', 'orangered', 'firebrick']
+CELL_LINE_COLORS = ['navy', 'cornflowerblue', 'forestgreen', 'deeppink', 'orangered', 'firebrick']
 
 DSDNA_FAMILIES = ['Polyomaviridae', 'Papillomaviridae', 'Adenoviridae', 'Herpesviridae']
+DSDNA_FAMILY_COLORS = {
+    'Polyomaviridae': 'deepskyblue',
+    'Papillomaviridae': 'blueviolet',
+    'Adenoviridae': 'orange',
+    'Herpesviridae': 'firebrick',
+}
+
 VIRUSES = [
     # Herpesvirus
     'Herpesviridae, Herpes Simplex 1, KOS',
