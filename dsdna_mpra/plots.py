@@ -90,10 +90,16 @@ def heatmap_with_stats(
     title_args: Optional[dict] = None,
     text_fontsize: int = 15,
     set_xticklabels: bool = True,
-    set_yticklabels: bool = True
+    set_yticklabels: bool = True,
+    text_values: np.ndarray | None = None,
 ) -> AxesImage:
 
-    for (j, i), val in np.ndenumerate(values.to_numpy()):
+    if text_values is None:
+        text_values = values.to_numpy()
+    else:
+        assert text_values.shape == values.to_numpy().shape
+
+    for (j, i), val in np.ndenumerate(text_values):
         if pd.isna(val):
             continue
         if np.isclose(val, int(val)):
