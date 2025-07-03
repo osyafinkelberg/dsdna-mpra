@@ -56,3 +56,5 @@ VIRUSES = [
     'Polyomaviridae, JC, Strain MAD-4',
     'Polyomaviridae, Merkel Cell Polyoma, Strain MKL-1',
 ]
+
+GENE_KINETIC_GROUPS = ['IE', 'E', 'E/L', 'L', 'Latent']
