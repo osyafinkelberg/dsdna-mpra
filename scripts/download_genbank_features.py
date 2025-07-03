@@ -33,26 +33,34 @@ def extract_gene_positions(genome_id: str) -> pd.DataFrame:
     records = []
     with Entrez.efetch(db="nucleotide", id=genome_id, rettype="gb", retmode="text") as handle:
         record = SeqIO.read(handle, "genbank")
-        for feature in record.features:
+        features = [f for f in record.features if f.type == "gene"]
+        if not features:
+            features = [f for f in record.features if f.type == "mRNA"]
+        for feature in features:
             if feature.type == "gene":
                 gene_name = feature.qualifiers.get("gene", [""])[0]
-                strand = '+' if feature.location.strand == 1 else '-'
-                start = int(feature.location.start)
-                end = int(feature.location.end)
-                five_prime = start if strand == '+' else end
-                three_prime = end if strand == '+' else start
-                records.append({
-                    "genome": genome_id,
-                    "gene_name": gene_name,
-                    "strand": strand,
-                    "five_prime": five_prime,
-                    "three_prime": three_prime
-                })
+            else:  # mRNA fallback
+                gene_name = feature.qualifiers.get(
+                    "gene", feature.qualifiers.get("product",  feature.qualifiers.get("transcript_id", [""]))
+                )[0]
+            strand = '+' if feature.location.strand == 1 else '-'
+            start = int(feature.location.start)
+            end = int(feature.location.end)
+            five_prime = start if strand == '+' else end
+            three_prime = end if strand == '+' else start
+            records.append({
+                "genome": genome_id,
+                "gene_name": gene_name,
+                "strand": strand,
+                "five_prime": five_prime,
+                "three_prime": three_prime
+            })
     return pd.DataFrame(records)
 
 
 def main() -> None:
-    virus_genomes = pd.read_csv(config.RAW_DIR / 'virus_genbank_ids.txt').columns.values
+    virus_genomes = pd.read_csv(config.RAW_DIR / 'virus_genbank_ids.txt').columns.values.tolist()
+    virus_genomes += ['V01555.2', 'BK012101.1', 'GQ994935.1', 'NC_001348.1']  # CAGE-seq genome records
     Entrez.email = config.ENTREZ_EMAIL
 
     # collect and save CDS positions
