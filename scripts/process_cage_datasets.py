@@ -4,7 +4,7 @@ import pandas as pd
 from Bio import Entrez, SeqIO
 
 sys.path.insert(0, '..')
-from dsdna_mpra import config, clustering  # noqa E402
+from dsdna_mpra import config  # noqa E402
 
 
 def main() -> None:
