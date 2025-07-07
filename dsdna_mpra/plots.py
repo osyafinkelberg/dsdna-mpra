@@ -1,12 +1,19 @@
+import sys
 import typing as tp
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
+import scipy.stats as sps
+
+import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.image import AxesImage
+import matplotlib.patches as patches
 from matplotlib.patches import Patch
-import scipy.stats as sps
-from typing import Optional
+import logomaker
+
+sys.path.insert(0, '..')
+from dsdna_mpra import config, motifs  # noqa E402
 
 
 def violin(
@@ -86,8 +93,8 @@ def box(
 def heatmap_with_stats(
     ax: Axes,
     values: pd.DataFrame,
-    imshow_args: Optional[dict] = None,
-    title_args: Optional[dict] = None,
+    imshow_args: tp.Optional[dict] = None,
+    title_args: tp.Optional[dict] = None,
     text_fontsize: int = 15,
     set_xticklabels: bool = True,
     set_yticklabels: bool = True,
@@ -139,12 +146,12 @@ def stacked_bar_plot(
     hue: str,
     weight: str,
     color: str,
-    legend_title: Optional[str] = None,
+    legend_title: tp.Optional[str] = None,
     normalize_weights: bool = False,
     x_pos_start: float = -1.0,
     x_pos_step: float = 1.0,
     width: float = 0.8,
-    legend_keys: Optional[tp.Dict[str, tp.Any]] = None
+    legend_keys: tp.Optional[tp.Dict[str, tp.Any]] = None
 ) -> None:
     if legend_keys is None:
         legend_keys = {}
@@ -182,3 +189,85 @@ def stacked_bar_plot(
             Patch(facecolor=color, edgecolor=color, label=label) for color, label in sorted_legend
         ]
         ax.legend(handles=legend_handles, title=legend_title, loc='upper left', **legend_keys)
+
+
+def motif_annotation_plot(
+    tf_motifs: tp.Dict[str, np.ndarray],
+    tile_id: str,
+    tile_contribution_scores: np.ndarray,
+    contribution_score_peaks: tp.List[tp.List[int]],
+    motif_match_positions: np.ndarray,
+    matched_motifs: np.ndarray,
+    tf_motif_genes: tp.Dict[str, str],
+) -> plt.Figure:
+    """
+    Create a motif annotation plot with contribution scores, peaks, and motif matches.
+
+    Args:
+        tf_motifs (Dict[str, np.ndarray]): Dictionary of motif contribution weight matrices (CWMs).
+        tile_id (str): Identifier of the genomic tile.
+        tile_contribution_scores (np.ndarray): 200x4 contribution score array.
+        contribution_score_peaks (List[List[int]]): List of [start, stop] peak ranges.
+        motif_match_positions (np.ndarray): [n_peaks x n_top_matches x 2] array of motif match positions.
+        matched_motifs (np.ndarray): [n_peaks x n_top_matches] array of motif names.
+        tf_motif_genes (Dict[str, str]): Mapping from motif_id to assigned TF name.
+
+    Returns:
+        plt.Figure: Matplotlib figure showing contribution scores and motif annotations.
+    """
+    num_motif_tracks = matched_motifs.shape[1]
+    fig, axes = plt.subplots(
+        figsize=(18, 8),
+        nrows=1 + num_motif_tracks,
+        ncols=1,
+        height_ratios=[2] + [1] * num_motif_tracks
+    )
+
+    # Panel 1: Contribution Scores (CS)
+    scores = tile_contribution_scores.astype(np.float64)
+    score_df = pd.DataFrame(scores.T, columns=["A", "C", "G", "T"])
+    logomaker.Logo(score_df, ax=axes[0], center_values=False)
+
+    tacs = motifs.rolling_absolute_contribution_scores(scores, window=config.TACS_WINDOW)
+    axes[0].plot(np.arange(200), tacs, color='cornflowerblue')
+    axes[0].axhline(config.PER_POS_THRESHOLD * config.TACS_WINDOW, linestyle='--', color='red')
+    axes[0].set_title(tile_id)
+    axes[0].set_ylim([-1, 2.5])
+    axes[0].set_xlim([0, 200])
+    for start, stop in contribution_score_peaks:
+        rect = patches.Rectangle((start, -0.3), stop - start, 0.6,
+                                 linewidth=0.5, edgecolor='red', facecolor='none')
+        axes[0].add_patch(rect)
+    axes[0].tick_params(axis='x', bottom=False, labelbottom=False)
+    axes[0].set_ylabel('Contribution Scores')
+    axes[0].grid(False)
+
+    # Panels 2+: Motif Matches from CJS ranking
+    cs_dfs = motifs.build_contribution_score_dataframes(
+        match_positions=motif_match_positions,
+        matched_motifs=matched_motifs,
+        cwms=tf_motifs,
+    )
+
+    for i, cs_df in enumerate(cs_dfs):
+        ax = axes[1 + i]
+        logomaker.Logo(cs_df, ax=ax, center_values=False)
+        ax.tick_params(axis='x', bottom=False, labelbottom=False)
+        ax.tick_params(axis='y', left=False, labelleft=False)
+        ax.set_ylim([-1, 1])
+        ax.set_ylabel(f'Top-{i + 1} motif match\n(CJS)')
+        ax.grid(False)
+
+        # annotate motif TFs on the plot
+        for peak_idx in range(motif_match_positions.shape[0]):
+            motif_id = matched_motifs[peak_idx, i]
+            tf_label = tf_motif_genes.get(motif_id.removesuffix('_fwd').removesuffix('_rev'), "Unknown TF")
+            start, stop = motif_match_positions[peak_idx, i]
+            match_pos = int((start + stop) / 2)
+            ax.text(
+                match_pos, 0.6, tf_label, rotation=0, fontsize=16,
+                verticalalignment='bottom', horizontalalignment='center', color='red'
+            )
+
+    plt.subplots_adjust(wspace=0, hspace=0.1)
+    return fig
