@@ -749,14 +749,14 @@ def convert_sequences_to_malinois_input(
 def compute_malinois_model_predictions(
     malinois_model: 'BassetBranched',
     tile_sequences: tp.Iterable[str],
+    batch_size: int = 500,
     use_tqdm: bool = False,
-    batch_size: int = 500
 ) -> np.ndarray:
     valid_mask, tile_tensors = convert_sequences_to_malinois_input(tile_sequences)
-    predictions = np.full(valid_mask.size, np.nan, dtype=np.float32)
+    predictions = np.full((valid_mask.size, 3), np.nan, dtype=np.float32)
     if tile_tensors.shape[0] == 0:
         return predictions
-    malinois_model.eval()
+    malinois_model = malinois_model.eval().to(DEVICE)
     predicted_batches = []
     indices = range(0, tile_tensors.shape[0], batch_size)
     if use_tqdm:
