@@ -23,6 +23,7 @@ def main() -> None:
         np.concatenate([tile_sequences, dhs_sequences])
     )
     assert all(valid_mask)
+    onehots = onehots.cpu()
     np.savez(
         config.PROCESSED_DIR / "malinois_K562_onehot_sequences.npz",
         virus_tile_ids=tile_ids, virus_tiles=onehots[:tile_ids.size, :, 200: 400],
@@ -30,7 +31,7 @@ def main() -> None:
         arr_0=onehots[:, :, 200: 400]
     )
 
-    # hypothetical contribution scores (`pred_idx=0` corresponds to K562 cell line in Malinois model outputs)
+    # load Malinois model
     boda2.unpack_model_artifact(
         config.RAW_DIR / 'malinois_artifacts__20211113_021200__287348.tar.gz',
         config.MALINOIS_MODEL_DIR
@@ -38,6 +39,21 @@ def main() -> None:
     malinois_model = boda2.load_malinois_model(
         model_path=config.MALINOIS_MODEL_DIR
     )
+
+    # Malinois model predictions
+    tile_activities = boda2.compute_malinois_model_predictions(
+        malinois_model, tile_sequences, batch_size=BATCH_SIZE, use_tqdm=True
+    )
+    dhs_activities = boda2.compute_malinois_model_predictions(
+        malinois_model, dhs_sequences, batch_size=BATCH_SIZE, use_tqdm=True
+    )
+    np.savez(
+        config.RESULTS_DIR / "malinois_predicted_activities.npz",
+        virus_tile_ids=tile_ids, virus_tiles=tile_activities,
+        dhs_tile_ids=dhs_ids, dhs_tiles=dhs_activities,
+    )
+
+    # hypothetical contribution scores (`pred_idx=0` corresponds to K562 cell line in Malinois model outputs)
     tile_scores = boda2.compute_model_contribution_scores(
         malinois_model, tile_sequences, pred_idx=0, batch_size=BATCH_SIZE, use_tqdm=True
     )
