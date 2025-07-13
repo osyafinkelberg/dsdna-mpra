@@ -768,7 +768,7 @@ def compute_malinois_model_predictions(
             pred = malinois_model(batch)
         predicted_batches.append(pred.cpu().numpy())
     all_preds = np.concatenate(predicted_batches, axis=0)
-    transformed_preds = np.log2(np.exp(all_preds) + 1)
+    transformed_preds = np.log2(np.power(2, all_preds) + 1)  # np.log2(np.exp(all_preds) + 1)
     predictions[valid_mask] = transformed_preds
     return predictions
 
