@@ -201,14 +201,15 @@ def main() -> None:
     )
 
     # overlap between tiles and CAGE-seq peaks
+    CAGE_PROXIMITY_RANGE = 100
     cage_df = pd.concat([
         pd.read_csv(config.PROCESSED_DIR / 'cage_pmid_32341360_gbid_BK012101.1.csv'),
         pd.read_csv(config.PROCESSED_DIR / 'cage_pmid_33024035_gbid_NC_001348.1.csv'),
         pd.read_csv(config.PROCESSED_DIR / 'cage_pmid_29864140_gbid_V01555.2.csv'),
         pd.read_csv(config.PROCESSED_DIR / 'cage_pmid_38206015_gbid_GQ994935.1.csv'),
     ]).reset_index(drop=True)
-    cage_df['begin'] = cage_df.five_prime - PROXIMITY_RANGE
-    cage_df['end'] = cage_df.five_prime + PROXIMITY_RANGE
+    cage_df['begin'] = cage_df.five_prime - CAGE_PROXIMITY_RANGE
+    cage_df['end'] = cage_df.five_prime + CAGE_PROXIMITY_RANGE
     cage_tiles = pd.read_csv(config.PROCESSED_DIR / 'virus_paired_tiles_log2p_ratios_cage_genomes.csv')
     cage_tiles['end'] = cage_tiles.begin + 200  # tiles are 200 bp
     cage_tiles['tile_lfc'] = cage_tiles[['fwd_lfc', 'rev_lfc']].max(1)
