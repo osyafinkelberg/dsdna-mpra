@@ -222,6 +222,9 @@ def main() -> None:
     cage_tiles = compute_cell_rankings(cage_tiles)
     cage_tiles = mark_cres_whose_center_falls_in_regions(cage_tiles, cds_df, 'is_cds')
     cage_tiles = mark_cres_whose_center_falls_in_regions(cage_tiles, cage_df, 'is_cage_peak')
+    cage_tiles = pd.merge(cage_tiles, thresholds_df, on='cell', how='left')
+    cage_tiles['is_active'] = cage_tiles.tile_lfc >= cage_tiles.threshold
+    cage_tiles.drop('threshold', axis=1, inplace=True)
     cage_tiles.to_csv(config.RESULTS_DIR / "virus_paired_tiles_cage_peaks_overlap.csv", index=False)
 
     TILE_FEATURE = 'cell_rank'
