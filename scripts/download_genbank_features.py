@@ -1,10 +1,12 @@
 import sys
 
+import numpy as np
 import pandas as pd
 from Bio import Entrez, SeqIO
+from Bio.SeqFeature import CompoundLocation
 
 sys.path.insert(0, '..')
-from dsdna_mpra import config  # noqa E402
+from dsdna_mpra import config, clustering  # noqa E402
 
 
 def extract_cds_positions(genome_id: str) -> pd.DataFrame:
@@ -16,16 +18,25 @@ def extract_cds_positions(genome_id: str) -> pd.DataFrame:
                 gene_name = feature.qualifiers.get("gene", [""])[0]
                 protein_name = feature.qualifiers.get("product", [""])[0]
                 strand = '+' if feature.location.strand == 1 else '-'
-                begin = int(feature.location.start)
-                end = int(feature.location.end)
-                cds_data.append({
-                    "genome": genome_id,
-                    "gene_name": gene_name,
-                    "protein_name": protein_name,
-                    "strand": strand,
-                    "begin": begin,
-                    "end": end
-                })
+                if isinstance(feature.location, CompoundLocation):
+                    for part in feature.location.parts:
+                        cds_data.append({
+                            "genome": genome_id,
+                            "gene_name": gene_name,
+                            "protein_name": protein_name,
+                            "strand": strand,
+                            "begin": int(part.start),
+                            "end": int(part.end)
+                        })
+                else:
+                    cds_data.append({
+                        "genome": genome_id,
+                        "gene_name": gene_name,
+                        "protein_name": protein_name,
+                        "strand": strand,
+                        "begin": int(feature.location.start),
+                        "end": int(feature.location.end)
+                    })
     return pd.DataFrame(cds_data)
 
 
@@ -58,6 +69,34 @@ def extract_gene_positions(genome_id: str) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
+def extract_intergenic_regions(
+    gene_df: pd.DataFrame, cds_df: pd.DataFrame, genome_sizes: dict[str, int]
+) -> pd.DataFrame:
+    intergenic_regions = []
+    for genome, genome_size in genome_sizes.items():
+        genes = gene_df[gene_df.genome == genome]
+        cdss = cds_df[cds_df.genome == genome]
+        merged_genes = clustering.merge(np.sort(genes[['five_prime', 'three_prime']].values, axis=1))
+        merged_cdss = clustering.merge(np.sort(cdss[['begin', 'end']].values, axis=1))
+        merged_regions = clustering.merge(np.concatenate([merged_genes, merged_cdss]))
+        prev_end = 0
+        for start, end in merged_regions:
+            if prev_end < start:
+                intergenic_regions.append({
+                    "genome": genome,
+                    "begin": prev_end,
+                    "end": start,
+                })
+            prev_end = end
+        if prev_end < genome_size:
+            intergenic_regions.append({
+                "genome": genome,
+                "begin": prev_end,
+                "end": genome_size,
+            })
+    return pd.DataFrame(intergenic_regions)
+
+
 def main() -> None:
     virus_genomes = pd.read_csv(config.RAW_DIR / 'virus_genbank_ids.txt').columns.values.tolist()
     virus_genomes += ['V01555.2', 'BK012101.1', 'GQ994935.1', 'NC_001348.1']  # CAGE-seq genome records
@@ -70,6 +109,15 @@ def main() -> None:
     # collect and save gene start positions
     gene_df = pd.concat([extract_gene_positions(genome_id) for genome_id in virus_genomes]).reset_index(drop=True)
     gene_df.to_csv(config.PROCESSED_DIR / 'virus_gene_positions.csv', index=False)
+
+    # infer intergenic regions from gene body positions
+    genome_sizes = dict(
+        pd.read_csv(
+            config.PROCESSED_DIR / 'summary_virus_genome_records.csv'
+        )[['accession_id', 'genome_size']].values
+    )
+    intergenic_df = extract_intergenic_regions(gene_df, cds_df, genome_sizes)
+    intergenic_df.to_csv(config.PROCESSED_DIR / 'virus_intergenic_positions.csv', index=False)
 
 
 if __name__ == "__main__":

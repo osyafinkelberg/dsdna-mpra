@@ -164,6 +164,12 @@ def main() -> None:
     cres_cds_fractions_df = compute_observed_expected_overlap(cds_df, cres_cds_df, 'is_cds')
     pd.DataFrame(cres_cds_fractions_df).to_csv(config.RESULTS_DIR / "cres_in_cds_fractions.csv", index=False)
 
+    # observed and expected fractions of CREs in Intergenic Regions
+    intergenic_df = pd.read_csv(config.PROCESSED_DIR / 'virus_intergenic_positions.csv')
+    cres_inter_df = mark_cres_whose_center_falls_in_regions(cres_df, intergenic_df, 'is_intergenic')
+    cres_inter_fractions_df = compute_observed_expected_overlap(intergenic_df, cres_inter_df, 'is_intergenic')
+    pd.DataFrame(cres_inter_fractions_df).to_csv(config.RESULTS_DIR / "cres_in_intergenic_fractions.csv", index=False)
+
     # CREs proximal to GenBank gene start positions (observed and expected)
     gene_df = pd.read_csv(config.PROCESSED_DIR / 'virus_gene_positions.csv')
     gene_df['begin'] = gene_df.five_prime - PROXIMITY_RANGE
