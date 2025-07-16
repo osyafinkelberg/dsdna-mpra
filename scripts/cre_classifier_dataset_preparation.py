@@ -300,8 +300,8 @@ def create_train_test_datasets(
 
 
 if __name__ == "__main__":
-    # annotate_all_encode_peaks()
-    # run_malinois_predictions()
-    # add_shuffled_sequences()
+    annotate_all_encode_peaks()
+    run_malinois_predictions()
+    add_shuffled_sequences()
     merge_encode_datasets()
     create_train_test_datasets()
