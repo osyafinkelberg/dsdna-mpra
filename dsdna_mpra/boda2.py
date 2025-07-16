@@ -722,6 +722,12 @@ Custom Functions
 """
 
 
+def tensor2dna(seq_tensor: torch.Tensor, vocab_list=config.DNA_BASES) -> str:
+    # Convert a one-hot encoded DNA tensor back to a sequence string.
+    indices = torch.argmax(seq_tensor, dim=0)
+    return ''.join([vocab_list[i] for i in indices])
+
+
 def sequence_is_valid(seq: str) -> bool:
     if len(seq) != 200:
         return False
