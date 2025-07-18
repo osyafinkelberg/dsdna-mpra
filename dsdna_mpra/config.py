@@ -4,6 +4,7 @@ import os
 
 # base project directory (set manually)
 BASE_DIR = Path("/projectnb/vtrs/joseff/dsdna-mpra")
+PATH_TO_HOMER = BASE_DIR.parent / "soft/homer"
 ENTREZ_EMAIL = os.getenv("ENTREZ_EMAIL", "bioinfo.project@gmail.com")
 
 DATA_DIR = BASE_DIR / "data"
@@ -85,4 +86,9 @@ TF_GENES_K562 = [
     'SP/KLF', 'ELF', 'GATA', 'FOS:JUN', 'CTCF', 'NFY', 'USF', 'CREB', 'NRF1',
     'ZBTB33', 'ATF2', 'ZNF460', 'ZNF143', 'YY1', 'E2F', 'STAT', 'ELK:SREBF2',
     'ELK', 'CTCFL', 'POU', 'IRF3', 'MAZ', 'BATF3', 'SRF', 'GFI1B', 'NFIB'
+]
+
+ENCODE_CRE_TYPES = [
+    'Promoter-like', 'Promoter-like shuffled', 'Proximal', 'Proximal shuffled',
+    'Distal', 'Distal shuffled', 'CTCF-only', 'CTCF-only shuffled'
 ]
