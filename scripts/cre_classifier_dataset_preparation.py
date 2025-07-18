@@ -14,10 +14,10 @@ from dsdna_mpra import config, boda2  # noqa E402
 
 
 ENCODE_FILES = {
-    'ENCFF379UDA': 'promoter-like',
-    'ENCFF036NSJ': 'proximal',
-    'ENCFF535MKS': 'distal',
-    'ENCFF262LCI': 'ctcf-only'
+    'ENCFF379UDA': 'Promoter-like',
+    'ENCFF036NSJ': 'Proximal',
+    'ENCFF535MKS': 'Distal',
+    'ENCFF262LCI': 'CTCF-only'
 }
 
 VALID_BASES = {'A', 'C', 'G', 'T'}
@@ -173,6 +173,19 @@ def annotate_all_encode_peaks() -> None:
         )
 
 
+def add_shuffled_sequences() -> None:
+    K_LET = 3
+    for encode_id in tqdm(ENCODE_FILES, desc="Adding shuffled sequences"):
+        csv_path = config.PROCESSED_DIR / f"encode/{encode_id}_gencode_v46.csv"
+        encode_df = pd.read_csv(csv_path)
+        sequences = encode_df['sequence'].str.slice(50, 250)
+        encode_df['sequence_shuffled'] = [
+            shuffle(seq.encode("utf-8"), K_LET).decode("utf-8")
+            for seq in sequences
+        ]
+        encode_df.to_csv(csv_path, index=False)
+
+
 def run_malinois_predictions() -> None:
     """Run Malinois model predictions on annotated ENCODE regions."""
     boda2.unpack_model_artifact(
@@ -180,7 +193,7 @@ def run_malinois_predictions() -> None:
         config.MALINOIS_MODEL_DIR
     )
     malinois_model = boda2.load_malinois_model(config.MALINOIS_MODEL_DIR)
-
+    pred_columns = ['malinois_k562_lfc', 'malinois_hepg2_lfc', 'malinois_sknsh_lfc']
     for encode_id in ENCODE_FILES:
         csv_path = config.PROCESSED_DIR / f"encode/{encode_id}_gencode_v46.csv"
         encode_df = pd.read_csv(csv_path)
@@ -194,22 +207,10 @@ def run_malinois_predictions() -> None:
         )
         predictions_df = pd.DataFrame(
             predictions,
-            columns=['malinois_k562_lfc', 'malinois_hepg2_lfc', 'malinois_sknsh_lfc']
+            columns=pred_columns
         )
-        encode_df = pd.concat([encode_df, predictions_df], axis=1)
-        encode_df.to_csv(csv_path, index=False)
-
-
-def add_shuffled_sequences() -> None:
-    K_LET = 3
-    for encode_id in tqdm(ENCODE_FILES, desc="Annotating ENCODE files"):
-        csv_path = config.PROCESSED_DIR / f"encode/{encode_id}_gencode_v46.csv"
-        encode_df = pd.read_csv(csv_path)
-        sequences = encode_df['sequence'].str.slice(50, 250)
-        encode_df['sequence_shuffled'] = [
-            shuffle(seq.encode("utf-8"), K_LET).decode("utf-8")
-            for seq in sequences
-        ]
+        for column in pred_columns:
+            encode_df[column] = predictions_df[column]
         encode_df.to_csv(csv_path, index=False)
 
 
@@ -263,7 +264,7 @@ def encode_dataframe_to_dataset(encode_df: pd.DataFrame, output_path: Path) -> N
 
     # dataset
     dataset = dict()
-    dataset['sequence_with_genome_context'] = np.repeat(real_onehots, 2, axis=0)
+    dataset['sequence_with_genome_context'] = np.concatenate([real_onehots, real_onehots])
     dataset['sequence_with_mpra_flanks'] = np.concatenate([real_onehots_flanked, shuff_onehots_flanked])
     dataset['class'] = np.concatenate([real_class, real_class, shuff_class, shuff_class])
     tss_distance_log10p = np.log10(np.abs(encode_df.distance_to_tss.values) + 1)
@@ -301,7 +302,7 @@ def create_train_test_datasets(
 
 if __name__ == "__main__":
     annotate_all_encode_peaks()
-    run_malinois_predictions()
     add_shuffled_sequences()
+    run_malinois_predictions()
     merge_encode_datasets()
     create_train_test_datasets()
