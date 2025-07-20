@@ -1,5 +1,7 @@
-import sys
 import typing as tp
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
@@ -10,6 +12,7 @@ from matplotlib.axes import Axes
 from matplotlib.image import AxesImage
 import matplotlib.patches as patches
 from matplotlib.patches import Patch
+from PIL import Image
 import logomaker
 
 sys.path.insert(0, '..')
@@ -271,3 +274,18 @@ def motif_annotation_plot(
 
     plt.subplots_adjust(wspace=0, hspace=0.1)
     return fig
+
+
+def convert_jpgs_to_pdf(images_dir: Path, output_pdf: Path) -> None:
+    jpg_files = sorted(images_dir.glob("*.jpg"))
+    if not jpg_files:
+        raise FileNotFoundError(f"No JPG files found in directory: {images_dir}")
+
+    images = [Image.open(fp).convert("RGB") for fp in jpg_files]
+    images[0].save(
+        output_pdf,
+        format="PDF",
+        resolution=100.0,
+        save_all=True,
+        append_images=images[1:]
+    )
