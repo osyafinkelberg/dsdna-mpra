@@ -1,50 +1,12 @@
-import typing as tp
 import sys
-from pathlib import Path
+import json
 
 import numpy as np
 import pandas as pd
 
-import json
-
 sys.path.insert(0, '..')
-from dsdna_mpra import config, clustering  # noqa E402
+from dsdna_mpra import config, motifs, clustering  # noqa E402
 from cre_genomic_feature_overlap import mark_cres_whose_center_falls_in_regions  # noqa E402
-
-
-EXCLUDED_GENES = {"?", "3'SS"}
-TF_GENE_INDEX = {gene: idx for idx, gene in enumerate(config.TF_GENES_K562)}
-
-
-def compute_tfbs_counts(
-    input_df: pd.DataFrame,
-    id_func: tp.Callable[[pd.Series], str],
-    output_path: Path,
-    base_columns: list[str],
-    tile_motif_map: dict[str, dict],
-    motif_to_gene_map: dict[str, str]
-) -> None:
-    tfbs_counts = []
-
-    for row in input_df[base_columns].itertuples(index=False):
-        element_id = id_func(row)
-        element_info = tile_motif_map.get(element_id, {})
-        motifs = element_info.get('motifs', [])
-        element_tfbs_counts = [0] * len(config.TF_GENES_K562)
-        for motif in motifs:
-            cleaned_motif = motif.removesuffix('_fwd').removesuffix('_rev')
-            tf_genes_str = motif_to_gene_map.get(cleaned_motif, "")
-            for gene in tf_genes_str.split('-'):
-                if gene in EXCLUDED_GENES:
-                    continue
-                idx = TF_GENE_INDEX.get(gene)
-                if idx is not None:
-                    element_tfbs_counts[idx] += 1
-
-        tfbs_counts.append(list(row) + element_tfbs_counts)
-
-    df = pd.DataFrame(tfbs_counts, columns=base_columns + config.TF_GENES_K562)
-    df.to_csv(output_path, index=False)
 
 
 def main() -> None:
@@ -100,7 +62,7 @@ def main() -> None:
 
     # TFBS counts for individual TFs
     tile_columns = ['tile_id', 'virus', 'genome', 'begin', 'fwd_lfc', 'rev_lfc', 'malinois_k562_lfc']
-    compute_tfbs_counts(
+    motifs.compute_tfbs_counts(
         input_df=paired_tiles,
         id_func=lambda row: row.tile_id,
         output_path=config.RESULTS_DIR / "malinois_K562_tfbs_counts_virus_tiles.csv",
@@ -109,7 +71,7 @@ def main() -> None:
         motif_to_gene_map=motif_to_gene_map
     )
     dhs_columns = ['chromosome', 'center', 'start', 'stop', 'intensity', 'malinois_k562_lfc']
-    compute_tfbs_counts(
+    motifs.compute_tfbs_counts(
         input_df=dhs_df,
         id_func=lambda row: f'{row.chromosome}-{row.center}',
         output_path=config.RESULTS_DIR / "malinois_K562_tfbs_counts_dhs.csv",
@@ -141,7 +103,7 @@ def main() -> None:
                 tf_genes = motif_df.iloc[nearby_motifs.motif_index.values].tf_gene
                 for tf_gene in tf_genes:
                     for gene in tf_gene.split('-'):  # Multiple TFs may be listed with hyphens
-                        idx = TF_GENE_INDEX.get(gene)
+                        idx = config.TF_GENES_K562_INDEX.get(gene)
                         if idx is not None:
                             tfbs_counts[idx] += 1
             tfbs_counts_per_tss.append(tfbs_counts)
@@ -163,7 +125,7 @@ def main() -> None:
     tfbs_counts = np.zeros((len(config.TF_GENES_K562), 2), dtype=np.float32)
     for tf_gene, is_cds, count in motif_cds_counts.itertuples(index=False):
         for gene in tf_gene.split('-'):
-            idx = TF_GENE_INDEX.get(gene)
+            idx = config.TF_GENES_K562_INDEX.get(gene)
             if idx is not None:
                 tfbs_counts[idx, int(is_cds)] += count
     # calculate total CDS size and genome size (merge overlapping regions)

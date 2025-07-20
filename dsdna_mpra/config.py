@@ -88,7 +88,15 @@ TF_GENES_K562 = [
     'ELK', 'CTCFL', 'POU', 'IRF3', 'MAZ', 'BATF3', 'SRF', 'GFI1B', 'NFIB'
 ]
 
+TF_GENES_K562_EXCLUDED = {"?", "3'SS"}
+
+TF_GENES_K562_INDEX = {gene: idx for idx, gene in enumerate(TF_GENES_K562)}
+
 ENCODE_CRE_TYPES = [
     'Promoter-like', 'Promoter-like shuffled', 'Proximal', 'Proximal shuffled',
     'Distal', 'Distal shuffled', 'CTCF-only', 'CTCF-only shuffled'
+]
+
+ENCODE_CRE_TYPES_SHORT = [
+    'Promoter-like', 'Proximal', 'Distal', 'CTCF-only', 'Undetermined'
 ]

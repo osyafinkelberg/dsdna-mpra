@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Callable
 from pathlib import Path
 
 import numpy as np
@@ -448,3 +448,50 @@ def match_motifs_to_contribution_score_peaks(
 
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(best_match, f, ensure_ascii=False, indent=1)
+
+
+def compute_tfbs_counts(
+    input_df: pd.DataFrame,
+    id_func: Callable[[pd.Series], str],
+    output_path: Path,
+    base_columns: list[str],
+    tile_motif_map: dict[str, dict],
+    motif_to_gene_map: dict[str, str]
+) -> None:
+    """
+    Compute transcription factor binding site (TFBS) counts per element and save the result.
+
+    For each row in the input DataFrame, identifies associated motifs using the provided
+    `tile_motif_map` and maps them to transcription factor (TF) genes using `motif_to_gene_map`.
+    Counts the occurrences of each TF in the K562 cell line, excluding specified TFs,
+    and appends these counts to the base columns. Saves the resulting DataFrame to a CSV file.
+
+    Args:
+        input_df: Input DataFrame containing genomic elements.
+        id_func: Function to extract a unique ID for each row (used to query tile_motif_map).
+        output_path: Path to save the output CSV file with TFBS counts.
+        base_columns: List of column names to retain from the input DataFrame.
+        tile_motif_map: Dictionary mapping element IDs to motif data.
+        motif_to_gene_map: Dictionary mapping motif names to TF gene names.
+    """
+    tfbs_counts = []
+
+    for row in input_df[base_columns].itertuples(index=False):
+        element_id = id_func(row)
+        element_info = tile_motif_map.get(element_id, {})
+        motifs = element_info.get('motifs', [])
+        element_tfbs_counts = [0] * len(config.TF_GENES_K562)
+        for motif in motifs:
+            cleaned_motif = motif.removesuffix('_fwd').removesuffix('_rev')
+            tf_genes_str = motif_to_gene_map.get(cleaned_motif, "")
+            for gene in tf_genes_str.split('-'):
+                if gene in config.TF_GENES_K562_EXCLUDED:
+                    continue
+                idx = config.TF_GENES_K562_INDEX.get(gene)
+                if idx is not None:
+                    element_tfbs_counts[idx] += 1
+
+        tfbs_counts.append(list(row) + element_tfbs_counts)
+
+    df = pd.DataFrame(tfbs_counts, columns=base_columns + config.TF_GENES_K562)
+    df.to_csv(output_path, index=False)
