@@ -99,6 +99,8 @@ if __name__ == "__main__":
     motifs.compute_jaccard_similarity_scores(tf_motifs, cwm_shifts, contrib_scores, tile_ids, cjs_output_path)
 
     motif_output_path = config.RESULTS_DIR / "malinois_K562_tf_motif_map.json"
-    motifs.match_motifs_to_contribution_score_peaks(tf_motifs, cwm_shifts, contrib_scores, tile_ids, motif_output_path)
+    motifs.match_motifs_to_contribution_score_peaks(
+        tf_motifs, cwm_shifts, contrib_scores, cjs_output_path, motif_output_path
+    )
 
     build_genome_wide_motif_instances_map()

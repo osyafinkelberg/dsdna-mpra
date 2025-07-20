@@ -374,7 +374,7 @@ def match_motifs_to_contribution_score_peaks(
     tf_motifs: dict[str, np.ndarray],
     cwm_shifts_unordered: dict[str, int],
     contrib_scores: np.ndarray,
-    tile_ids: np.ndarray,
+    cjs_path: Path,
     output_path: Path
 ) -> None:
 
@@ -397,7 +397,6 @@ def match_motifs_to_contribution_score_peaks(
                 step = 10000 if tile_idx + 1 < num_tiles else num_tiles % 10000
                 pbar.update(step)
 
-    cjs_path = config.PROCESSED_DIR / 'malinois_K562_contribution_scores_to_motifs_similarity'
     with h5py.File(cjs_path, "r") as f:
         cjs_arr = f["continuous_jaccard_similarity"][()]
         tile_ids = f["tile_ids"][()].astype(str)

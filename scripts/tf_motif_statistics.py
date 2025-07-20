@@ -12,8 +12,8 @@ from cre_genomic_feature_overlap import mark_cres_whose_center_falls_in_regions 
 def main() -> None:
     # load data
     virus_genomes = pd.read_csv(config.RAW_DIR / 'virus_genbank_ids.txt').columns.values
-    thresholds_df = pd.read_csv(config.RESULTS_DIR / 'thresholds_log2_1p.csv')[['cell', 'threshold']]
-    k562_threshold = thresholds_df.loc[thresholds_df['cell'] == 'K562', 'threshold'].iloc[0]
+    thresholds_df = pd.read_csv(config.RESULTS_DIR / 'thresholds_malinois_log2_1p.csv')[['cell', 'threshold']]
+    k562_threshold = thresholds_df.loc[thresholds_df['cell'] == 'k562', 'threshold'].iloc[0]
 
     malinois_data = np.load(config.RESULTS_DIR / "malinois_predicted_activities.npz", allow_pickle=True)
     dhs_tiles = malinois_data['dhs_tiles']
