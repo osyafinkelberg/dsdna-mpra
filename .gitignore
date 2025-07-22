@@ -1,0 +1,16 @@
+.idea/
+.vscode/
+**/__pycache__/
+*.py[cod]
+*.ipynb_checkpoints/
+*.pytest_cache
+*.mypy_cache
+*.cache
+*.out
+*.err
+*.csv
+*.txt
+*.gz
+**/artifacts/
+data/
+scripts/scc/
