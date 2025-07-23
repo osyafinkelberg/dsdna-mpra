@@ -16,7 +16,7 @@ The repository includes the `dsdna-mpra` Python package for processing and analy
 
 ## Installation
 
-To install the package locally:
+To install locally:
 
 ```bash
 git clone https://github.com/osyafinkelberg/dsdna-mpra.git
