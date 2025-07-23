@@ -27,3 +27,27 @@ source .venv/bin/activate
 
 pip install -e .
 ```
+
+### Configuration
+
+By default, the base project directory (`BASE_DIR`) is automatically inferred from the code structure.
+
+If needed, you can override it by setting the environment variable:
+
+```bash
+export DSDNA_MPRA_BASE_DIR=/your/path/to/dsdna-mpra
+```
+
+### External Tools
+
+By default, the project expects HOMER to be installed at:
+
+```bash
+<BASE_DIR>/../soft/homer
+```
+
+If HOMER is installed elsewhere, set the environment variable:
+
+```bash
+export PATH_TO_HOMER=/custom/path/to/homer
+```

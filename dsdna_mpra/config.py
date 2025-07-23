@@ -3,8 +3,9 @@ import os
 
 
 # base project directory (set manually)
-BASE_DIR = Path("/projectnb/vtrs/joseff/dsdna-mpra")
-PATH_TO_HOMER = BASE_DIR.parent / "soft/homer"
+BASE_DIR = Path(os.getenv("DSDNA_MPRA_BASE_DIR", Path(__file__).resolve().parents[1]))
+PATH_TO_HOMER = Path(os.getenv("PATH_TO_HOMER", BASE_DIR.parent / "soft/homer"))
+
 ENTREZ_EMAIL = os.getenv("ENTREZ_EMAIL", "bioinfo.project@gmail.com")
 
 DATA_DIR = BASE_DIR / "data"
