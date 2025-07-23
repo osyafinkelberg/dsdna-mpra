@@ -13,7 +13,7 @@ REORDER_INDEX = [STANDARD_ORDER.index(d) for d in DINUCLEOTIDES]  # biologically
 
 
 def seq_to_int_array(seq: str) -> np.ndarray:
-    # Convert DNA sequence to integer array (A=0, C=1, G=2, T=3)
+    # convert DNA sequence to integer array (A=0, C=1, G=2, T=3)
     return np.fromiter((BASE_TO_INT.get(base, -1) for base in seq), dtype=np.int8)
 
 
@@ -24,25 +24,38 @@ def compute_dinucleotide_counts(
     if isinstance(sequences, str):
         sequences = [sequences]
 
-    num_seqs = len(sequences)
-    raw_counts = np.zeros((num_seqs, 16), dtype=np.float64)
+    int_seqs = [seq_to_int_array(seq.upper()) for seq in sequences]
 
-    for i, seq in enumerate(sequences):
-        nuc_arr = seq_to_int_array(seq.upper())
-        nuc_arr = nuc_arr[nuc_arr >= 0]
+    # collect valid sequences and keep their original indices
+    valid_seqs_with_indices = [
+        (i, arr[arr >= 0]) for i, arr in enumerate(int_seqs)
+        if np.count_nonzero(arr >= 0) >= 2
+    ]
 
-        if len(nuc_arr) < 2:
-            continue
+    raw_counts = np.zeros((len(sequences), 16), dtype=np.float64)
+    all_dinucs = []
+    seq_indices = []
 
-        dinucs = 4 * nuc_arr[:-1] + nuc_arr[1:]
-        uniq, counts = np.unique(dinucs, return_counts=True)
-        raw_counts[i, uniq] += counts
+    for orig_idx, arr in valid_seqs_with_indices:
+        dinucs = 4 * arr[:-1] + arr[1:]
+        all_dinucs.append(dinucs)
+        seq_indices.append(np.full(len(dinucs), orig_idx, dtype=np.int32))
 
         if include_reverse_complement:
-            rc_arr = 3 - nuc_arr[::-1]
+            rc_arr = 3 - arr[::-1]
             rc_dinucs = 4 * rc_arr[:-1] + rc_arr[1:]
-            uniq_rc, counts_rc = np.unique(rc_dinucs, return_counts=True)
-            raw_counts[i, uniq_rc] += counts_rc
+            all_dinucs.append(rc_dinucs)
+            seq_indices.append(np.full(len(rc_dinucs), orig_idx, dtype=np.int32))
+
+    if all_dinucs:
+        all_dinucs_flat = np.concatenate(all_dinucs)
+        all_indices_flat = np.concatenate(seq_indices)
+        flat_ids = all_indices_flat * 16 + all_dinucs_flat
+        uniq, counts = np.unique(flat_ids, return_counts=True)
+
+        rows = uniq // 16
+        cols = uniq % 16
+        raw_counts[rows, cols] += counts
 
     return raw_counts[:, REORDER_INDEX]
 
@@ -54,27 +67,31 @@ def compute_average_dinucleotide_composition(
     if isinstance(sequences, str):
         sequences = [sequences]
 
-    raw_total_counts = np.zeros(16, dtype=np.float64)
+    seq_arrays = [seq_to_int_array(seq.upper()) for seq in sequences]
+    seq_arrays = [arr[arr >= 0] for arr in seq_arrays]  # consider only A, C, G, T
+    seq_arrays = [arr for arr in seq_arrays if len(arr) >= 2]  # filter short sequences
 
-    for seq in sequences:
-        nuc_arr = seq_to_int_array(seq.upper())
-        nuc_arr = nuc_arr[nuc_arr >= 0]
+    if not seq_arrays:
+        return np.zeros(16, dtype=np.float64)
 
-        if len(nuc_arr) < 2:
-            continue
+    forward_dinucs = [4 * arr[:-1] + arr[1:] for arr in seq_arrays]
 
-        dinucs = 4 * nuc_arr[:-1] + nuc_arr[1:]
-        uniq, counts = np.unique(dinucs, return_counts=True)
-        raw_total_counts[uniq] += counts
+    if include_reverse_complement:
+        reverse_dinucs = [
+            4 * (3 - arr[::-1][:-1]) + (3 - arr[::-1][1:])
+            for arr in seq_arrays
+        ]
+        all_dinucs = np.concatenate(forward_dinucs + reverse_dinucs)
+    else:
+        all_dinucs = np.concatenate(forward_dinucs)
 
-        if include_reverse_complement:
-            rc_arr = 3 - nuc_arr[::-1]
-            rc_dinucs = 4 * rc_arr[:-1] + rc_arr[1:]
-            uniq_rc, counts_rc = np.unique(rc_dinucs, return_counts=True)
-            raw_total_counts[uniq_rc] += counts_rc
+    uniq, counts = np.unique(all_dinucs, return_counts=True)
+    total_counts = np.zeros(16, dtype=np.float64)
+    total_counts[uniq] = counts
 
-    total = raw_total_counts.sum()
-    final_counts = raw_total_counts[REORDER_INDEX]
+    final_counts = total_counts[REORDER_INDEX]
+    total = final_counts.sum()
+
     return final_counts / total if total > 0 else final_counts
 
 
