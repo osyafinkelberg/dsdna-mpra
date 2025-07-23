@@ -181,7 +181,7 @@ def plot_mpra_activity_genomewide(
 def main() -> None:
     # === load data ===
     virus_genomes = pd.read_csv(config.RAW_DIR / 'virus_genbank_ids.txt').columns.values
-    genomes_summary = pd.read_csv(config.PROCESSED_DIR / 'summary_virus_genome_records.csv')
+    genomes_summary = pd.read_csv(config.RAW_DIR / 'summary_virus_genome_records.csv')
     genomes_summary = genomes_summary[genomes_summary.accession_id.isin(virus_genomes)]
 
     paired_tiles = pd.read_csv(config.RESULTS_DIR / "virus_paired_tiles_cds_overlap.csv")

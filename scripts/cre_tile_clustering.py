@@ -8,7 +8,7 @@ from dsdna_mpra import config, clustering  # noqa E402
 
 def main() -> None:
     virus_genomes = pd.read_csv(config.RAW_DIR / 'virus_genbank_ids.txt').columns.values
-    paired_tiles = pd.read_csv(config.PROCESSED_DIR / 'virus_paired_tiles_log2p_ratios.csv')
+    paired_tiles = pd.read_csv(config.RAW_DIR / 'virus_paired_tiles_log2p_ratios.csv')
     paired_tiles = paired_tiles[
         paired_tiles['genome'].isin(virus_genomes) &
         paired_tiles['family'].isin(config.DSDNA_FAMILIES)

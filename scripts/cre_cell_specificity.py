@@ -42,7 +42,7 @@ def compute_coverage_matrix(
         return np.array([[0, total_length]], dtype=np.int64), np.array([[np.nan]], dtype=np.float64)
 
     boundaries = np.unique(
-        np.concatenate([intervals[:, 0], intervals[:, 1], [total_length]]), sorted=True
+        np.concatenate([intervals[:, 0], intervals[:, 1], [total_length]])
     )
     slices = np.column_stack([boundaries[:-1], boundaries[1:]])
     coverage = [[] for _ in range(len(slices))]
@@ -61,7 +61,7 @@ def compute_coverage_matrix(
 
 
 def main() -> None:
-    genomes_summary = pd.read_csv(config.PROCESSED_DIR / 'summary_virus_genome_records.csv')
+    genomes_summary = pd.read_csv(config.RAW_DIR / 'summary_virus_genome_records.csv')
     cres_df = pd.read_csv(config.RESULTS_DIR / "cre_positions_strands_merged.csv")
     cres_df = cres_df.merge(
         genomes_summary[['accession_id', 'genome_size']].rename(columns={'accession_id': 'genome'}),

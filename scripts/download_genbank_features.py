@@ -113,7 +113,7 @@ def main() -> None:
     # infer intergenic regions from gene body positions
     genome_sizes = dict(
         pd.read_csv(
-            config.PROCESSED_DIR / 'summary_virus_genome_records.csv'
+            config.RAW_DIR / 'summary_virus_genome_records.csv'
         )[['accession_id', 'genome_size']].values
     )
     intergenic_df = extract_intergenic_regions(gene_df, cds_df, genome_sizes)

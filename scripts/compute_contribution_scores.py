@@ -10,7 +10,7 @@ BATCH_SIZE = 500
 
 def main() -> None:
     # load virus tile and human DHS data
-    paired_tiles = pd.read_csv(config.PROCESSED_DIR / 'virus_paired_tiles_sequences.csv')
+    paired_tiles = pd.read_csv(config.RAW_DIR / 'virus_paired_tiles_sequences.csv')
     tile_sequences = paired_tiles.tile_sequence.values
     tile_ids = paired_tiles.tile_id.values
     dhs_df = pd.read_csv(config.RAW_DIR / 'K562-DS15363_peaks_with_sequences.bed', sep=',')

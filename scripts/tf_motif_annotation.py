@@ -11,7 +11,7 @@ def build_genome_wide_motif_instances_map() -> None:
     # load list of virus genomes
     virus_genomes = pd.read_csv(config.RAW_DIR / 'virus_genbank_ids.txt').columns.values
     # load and filter paired tiles
-    paired_tiles = pd.read_csv(config.PROCESSED_DIR / 'virus_paired_tiles_log2p_ratios.csv')
+    paired_tiles = pd.read_csv(config.RAW_DIR / 'virus_paired_tiles_log2p_ratios.csv')
     paired_tiles = paired_tiles[
         paired_tiles['genome'].isin(virus_genomes) &
         paired_tiles['family'].isin(config.DSDNA_FAMILIES)

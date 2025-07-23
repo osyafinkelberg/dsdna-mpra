@@ -26,7 +26,7 @@ def main() -> None:
         tile_motif_map = {entry['tile_id']: entry for entry in json.load(f)}
     motif_to_gene_map = dict(pd.read_csv(config.RESULTS_DIR / 'malinois_K562_tf_motif_families.csv').values)
 
-    paired_tiles = pd.read_csv(config.PROCESSED_DIR / 'virus_paired_tiles_log2p_ratios.csv')
+    paired_tiles = pd.read_csv(config.RAW_DIR / 'virus_paired_tiles_log2p_ratios.csv')
     paired_tiles = paired_tiles[
         paired_tiles['genome'].isin(virus_genomes) &
         paired_tiles['family'].isin(config.DSDNA_FAMILIES) &
@@ -134,7 +134,7 @@ def main() -> None:
         cds_regions = np.sort(genome_cds[['begin', 'end']].values, axis=1)
         merged = clustering.merge(cds_regions)
         cds_bp += (merged[:, 1] - merged[:, 0]).sum()
-    genome_size_bp = pd.read_csv(config.PROCESSED_DIR / 'summary_virus_genome_records.csv').genome_size.sum()
+    genome_size_bp = pd.read_csv(config.RAW_DIR / 'summary_virus_genome_records.csv').genome_size.sum()
     non_cds_bp = genome_size_bp - cds_bp
     # normalize counts to motifs per 1 kbp
     results_df = pd.DataFrame({

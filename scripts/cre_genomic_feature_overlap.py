@@ -128,9 +128,9 @@ def main() -> None:
     PROXIMITY_RANGE = 250
 
     # load MPRA data
-    genomes_summary = pd.read_csv(config.PROCESSED_DIR / 'summary_virus_genome_records.csv')
+    genomes_summary = pd.read_csv(config.RAW_DIR / 'summary_virus_genome_records.csv')
     virus_genomes = pd.read_csv(config.RAW_DIR / 'virus_genbank_ids.txt').columns.values
-    paired_tiles = pd.read_csv(config.PROCESSED_DIR / 'virus_paired_tiles_log2p_ratios.csv')
+    paired_tiles = pd.read_csv(config.RAW_DIR / 'virus_paired_tiles_log2p_ratios.csv')
     paired_tiles = paired_tiles[
         paired_tiles['genome'].isin(virus_genomes) &
         paired_tiles['family'].isin(config.DSDNA_FAMILIES)
@@ -216,7 +216,7 @@ def main() -> None:
     ]).reset_index(drop=True)
     cage_df['begin'] = cage_df.five_prime - CAGE_PROXIMITY_RANGE
     cage_df['end'] = cage_df.five_prime + CAGE_PROXIMITY_RANGE
-    cage_tiles = pd.read_csv(config.PROCESSED_DIR / 'virus_paired_tiles_log2p_ratios_cage_genomes.csv')
+    cage_tiles = pd.read_csv(config.RAW_DIR / 'virus_paired_tiles_log2p_ratios_cage_genomes.csv')
     cage_tiles['end'] = cage_tiles.begin + 200  # tiles are 200 bp
     cage_tiles['tile_lfc'] = cage_tiles[['fwd_lfc', 'rev_lfc']].max(1)
     cage_tiles = compute_cell_rankings(cage_tiles)

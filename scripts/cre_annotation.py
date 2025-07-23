@@ -61,7 +61,7 @@ def merge_cres_across_cells(cre_df: pd.DataFrame) -> pd.DataFrame:
 def main() -> None:
     # load and filter tile data
     virus_genomes = pd.read_csv(config.RAW_DIR / 'virus_genbank_ids.txt').columns.values
-    paired_tiles = pd.read_csv(config.PROCESSED_DIR / 'virus_paired_tiles_log2p_ratios.csv')
+    paired_tiles = pd.read_csv(config.RAW_DIR / 'virus_paired_tiles_log2p_ratios.csv')
 
     paired_tiles = paired_tiles[
         paired_tiles['genome'].isin(virus_genomes) &

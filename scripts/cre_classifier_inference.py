@@ -67,7 +67,7 @@ def main():
 
     # --- virus tile prediction ---
     virus_genomes = pd.read_csv(config.RAW_DIR / 'virus_genbank_ids.txt').columns.values
-    paired_tiles = pd.read_csv(config.PROCESSED_DIR / 'virus_paired_tiles_log2p_ratios.csv')
+    paired_tiles = pd.read_csv(config.RAW_DIR / 'virus_paired_tiles_log2p_ratios.csv')
     paired_tiles = paired_tiles[
         paired_tiles['genome'].isin(virus_genomes) &
         paired_tiles['family'].isin(config.DSDNA_FAMILIES) &
@@ -80,7 +80,7 @@ def main():
         paired_tiles[['fwd_lfc', 'rev_lfc']].max(axis=1) >= K562_THRESHOLD
     ].reset_index(drop=True)
 
-    seqs = pd.read_csv(config.PROCESSED_DIR / 'virus_paired_tiles_sequences.csv')
+    seqs = pd.read_csv(config.RAW_DIR / 'virus_paired_tiles_sequences.csv')
     active_tiles = active_tiles.merge(seqs[['tile_id', 'tile_sequence']], on='tile_id', how='left')
 
     cds = pd.read_csv(config.RESULTS_DIR / "virus_paired_tiles_cds_overlap.csv")
