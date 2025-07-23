@@ -55,12 +55,13 @@ export PATH_TO_HOMER=/custom/path/to/homer
 ### Input Data
 
 All input data required to reproduce the analyses in this project is available at:  
-[https://zenodo.org/record/1234567](https://zenodo.org/record/1234567)
+https://zenodo.org/record/16379986  
+(DOI: [10.5281/zenodo.16379986](https://doi.org/10.5281/zenodo.16379986))
 
 Download and unzip the archive so that the contents are placed under the `data/raw/` directory within the project root:
 
 ```bash
 # From within the project root
-wget https://zenodo.org/record/1234567/files/dsdna-mpra-data.zip
+wget https://zenodo.org/record/16379986/files/dsdna-mpra-data.zip
 unzip dsdna-mpra-data.zip
 ```
