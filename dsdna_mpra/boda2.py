@@ -729,6 +729,8 @@ def tensor2dna(seq_tensor: torch.Tensor, vocab_list=config.DNA_BASES) -> str:
 
 
 def sequence_is_valid(seq: str) -> bool:
+    if not isinstance(seq, str):
+        return False
     if len(seq) != 200:
         return False
     valid_bases = {'A', 'C', 'G', 'T'}
