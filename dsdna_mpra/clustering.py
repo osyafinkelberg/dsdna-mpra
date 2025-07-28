@@ -46,7 +46,7 @@ def vectorized_pearsonr(
 ) -> NDArray[np.float64]:
     """
     Computes the Pearson correlation coefficient between each pair of columns in lhs_matrix and rhs_matrix,
-    using a fully vectorized approach.
+    using a fully vectorized approach, while ignoring NaNs and Infs.
 
     Parameters
     ----------
@@ -61,20 +61,26 @@ def vectorized_pearsonr(
         Matrix of Pearson correlation coefficients between each column of rhs_matrix and lhs_matrix.
         Entry (i, j) is the correlation between rhs_matrix[:, i] and lhs_matrix[:, j].
     """
-    n_samples = rhs_matrix.shape[0]
-    lhs_sum = lhs_matrix.sum(axis=0)  # (D1,)
-    rhs_sum = rhs_matrix.sum(axis=0)  # (D2,)
-    dot_product = np.einsum('ij,ik->kj', lhs_matrix, rhs_matrix) * n_samples  # (D1, D2).T → (D2, D1)
-    cross_term = np.outer(rhs_sum, lhs_sum)  # (D2, D1)
-    lhs_sq_sum = np.sum(lhs_matrix ** 2, axis=0)  # (D1,)
-    rhs_sq_sum = np.sum(rhs_matrix ** 2, axis=0)  # (D2,)
-    lhs_var = n_samples * lhs_sq_sum - lhs_sum ** 2  # (D1,)
-    rhs_var = n_samples * rhs_sq_sum - rhs_sum ** 2  # (D2,)
-    denominator = np.sqrt(np.outer(rhs_var, lhs_var))  # (D2, D1)
-    numerator = dot_product - cross_term  # (D2, D1)
+    lhs_valid = np.isfinite(lhs_matrix)  # shape (N, D1)
+    rhs_valid = np.isfinite(rhs_matrix)  # shape (N, D2)
+    valid_mask = lhs_valid[:, :, None] & rhs_valid[:, None, :]  # shape (N, D1, D2)
+    lhs_matrix_clean = np.where(lhs_valid, lhs_matrix, 0.0)
+    rhs_matrix_clean = np.where(rhs_valid, rhs_matrix, 0.0)
+    lhs = lhs_matrix_clean[:, :, None]  # (N, D1, 1)
+    rhs = rhs_matrix_clean[:, None, :]  # (N, 1, D2)
+    valid_counts = np.sum(valid_mask, axis=0)  # (D1, D2)
+    lhs_sum = np.sum(lhs * valid_mask, axis=0)
+    rhs_sum = np.sum(rhs * valid_mask, axis=0)
+    dot_product = np.sum(lhs * rhs * valid_mask, axis=0)
+    lhs_sq_sum = np.sum(lhs**2 * valid_mask, axis=0)
+    rhs_sq_sum = np.sum(rhs**2 * valid_mask, axis=0)
+    lhs_var = valid_counts * lhs_sq_sum - lhs_sum**2
+    rhs_var = valid_counts * rhs_sq_sum - rhs_sum**2
+    denominator = np.sqrt(lhs_var * rhs_var)
+    numerator = valid_counts * dot_product - lhs_sum * rhs_sum
     with np.errstate(divide='ignore', invalid='ignore'):
         corr_matrix = numerator / denominator
-    return corr_matrix
+    return corr_matrix.T  # shape (D2, D1)
 
 
 def find_sorted_label_boundaries(labels: NDArray[np.integer]) -> NDArray[np.int64]:
