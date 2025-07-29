@@ -54,15 +54,18 @@ def pfm_to_ppm(
 def ppm_to_pwm(
     proba_matrix: np.ndarray,
     nucl_frequencies: np.ndarray = np.full(4, 0.25),
-    indices: Optional[np.ndarray] = None
+    indices: Optional[np.ndarray] = None,
+    pseudocount: float = 0.0
 ) -> np.ndarray:
     """
-    Converts a Position Probability Matrix (PPM) to a Position Weight Matrix (PWM).
+    Converts a Position Probability Matrix (PPM) to a Position Weight Matrix (PWM),
+    with optional pseudocount smoothing.
 
     Parameters:
         proba_matrix (np.ndarray): Normalized probabilities (shape: 4 x N).
         nucl_frequencies (np.ndarray): Background frequencies (A, C, G, T).
         indices (Optional[np.ndarray]): Optional column indices to use for PWM calculation.
+        pseudocount (float): Value to add to each element in the PPM for smoothing. Default is 0.0.
 
     Returns:
         np.ndarray: Position Weight Matrix (PWM).
@@ -72,6 +75,10 @@ def ppm_to_pwm(
 
     if indices is not None:
         proba_matrix = proba_matrix[:, indices]
+
+    if pseudocount > 0:
+        proba_matrix += pseudocount
+        proba_matrix /= proba_matrix.sum(axis=0, keepdims=True)
 
     background = np.repeat(nucl_frequencies[:, np.newaxis], proba_matrix.shape[1], axis=1)
     energy = -np.log(proba_matrix) + np.log(background)
