@@ -54,7 +54,9 @@ export PATH_TO_HOMER=/custom/path/to/homer
 
 ### Input Data
 
-All input data required to reproduce the analyses in this project is available at:  
+The raw MPRA data was preprocessed using the published MPRA processing pipeline: [MPRAsuite](https://github.com/tewhey-lab/MPRASuite) by Tewhey Lab. The output of this preprocessing (quantified barcode counts and activity scores) is available in the Zenodo repository and serves as the starting point for all downstream analyses in this project.
+
+Preprocessed input data required to reproduce the analyses is available at:  
 https://zenodo.org/record/16379986  
 (DOI: [10.5281/zenodo.16379986](https://doi.org/10.5281/zenodo.16379986))
 
